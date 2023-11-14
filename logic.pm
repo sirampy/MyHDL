@@ -64,14 +64,17 @@ sub add_source {
 }
 
 #TODO:
-# takes an array of values and formats it to be compatible with _recieve_input
+# takes an array of values and formats it to be compatible with _recieve_input (no order)
 sub to_input_array {
     my $self = shift;
+    my @input_array;
     my @out;
-    my $args = @_;
 
-
-    
+    for (@_){
+        my @input = ($self,$_);
+        push @out, \@input;
+    }
+    return @out;
 }
 
 # recieve an input and match it to the correct input index
@@ -180,7 +183,7 @@ sub evaluate {
 # deallocate all nodes (I see this getting complecated)
 sub destructor(){}
 
-package gate;
 
+package gate;
 
 1;

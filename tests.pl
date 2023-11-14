@@ -168,6 +168,24 @@ sub test_recieve_input {
     }
 }
 
+sub test_to_input_array {
+    my $self = shift;
+    my @args = @_;
+    my $test = create_wire();
+
+    if (scalar @args == 0) {
+        @args = (0,1,1,0);
+    }
+    
+    my @out = $test->to_input_array(@args);
+
+    print "inputs: ", @args, " turn into: \n";
+    for (@out){
+        print @$_,"\n";
+    }
+    return @out;
+}
+
 sub test_evaluate {
 
 }
@@ -185,4 +203,4 @@ sub example_test_attributes {
 
 package main;
 
-logic_tests->test_recieve_input();
+logic_tests->test_to_input_array();
