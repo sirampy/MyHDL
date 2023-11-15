@@ -186,8 +186,38 @@ sub test_to_input_array {
     return @out;
 }
 
-sub test_evaluate {
+# tests all basic functionality of wire
+sub test_wire {
+    my $self = shift;
 
+    # setup a chain or wires
+    my $in_node = wire -> new;
+    my $L1_N0 = wire -> new;
+    my $L1_N1 = wire -> new;
+    my $out_node = wire -> new;
+
+    $in_node -> chain_add_output($L1_N0,$L1_N1);
+    $L1_N0 -> chain_add_output($out_node);
+    $L1_N1 -> chain_add_output($out_node);
+    
+    sub display{
+        print "~~~ INPUT: ~~~\n";
+        $self->test_attributes($in_node);
+        print "~~~ L1->N0: ~~~\n";
+        $self->test_attributes($L1_N0);
+        print "~~~ L1->N1: ~~~\n";
+        $self->test_attributes($L1_N1);
+        print "~~~ OUTPUT: ~~~\n";
+        $self->test_attributes($out_node);
+    }
+
+    print "====INITIAL:====\n";
+    display();
+
+    $in_node -> excec(0,1);
+    
+    print "====EVALUATED:====\n";
+    display();
 }
 
 # some example usages of logic_tests
@@ -203,4 +233,4 @@ sub example_test_attributes {
 
 package main;
 
-logic_tests->test_to_input_array();
+logic_tests->test_wire();

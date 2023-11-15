@@ -2,7 +2,7 @@ package logic_error;
 
 sub raise {
     ($self, $error, $location) = @_;
-    die("Error: $error at: $location");
+    die("Error: $error");
 
 }
 
@@ -16,13 +16,14 @@ sub new {
     my @outputs;
     my @sources;
     my @inputs;
+    my @values;
 
     my $self = {
         outputs => \@outputs,
         sources => \@sources,
         inputs => \@inputs, # -1 if unset
-        value => 0,
-        used => 0 # for loop protection
+        values => \@values, # current output
+        used => -1 # for loop protection
     };
 
     $self = bless $self, $class;
@@ -68,7 +69,7 @@ sub add_source {
 sub to_input_array {
     my $self = shift;
     my @input_array;
-    my @out;
+    my @out = ();
 
     for (@_){
         my @input = ($self,$_);
@@ -97,14 +98,15 @@ sub _recieve_input {
         my $set = 0;
         $order = @$v[2] if defined(@$v[2]);
 
-        for ($s = 0; $s < ( scalar $self->{sources}); $s++){
-
-            $possible_index = (@{$self->{sources}}[$s] == @$v[0]);
+        for ($s = 0; $s < ( scalar @{$self->{sources}}); $s++){
+            
+            $possible_index = (@{$self->{sources}}[$s] == @$v[0]); # here
             $not_set = ($self->{inputs}[$s] == -1);
             $correct_order = ($order == 0);
-
+            
             if ($possible_index and $not_set and $correct_order){
-                $self->{inputs}[$s] = @$v[1];
+                @{$self->{inputs}}[$s] = @$v[1];
+                #@$self->{inputs}[$s] = @$v[1];
                 $set = 1;
                 last;
             }
@@ -114,7 +116,7 @@ sub _recieve_input {
             }
         }
 
-    logic_error->raise("couldn't recieve input: $v") if not $set; # TODO: better error message
+    logic_error->raise("couldn't recieve input: ",@$v) if not $set; # TODO: better error message
     }
 }
 
@@ -122,62 +124,85 @@ sub excec { # reset and excecute all dependant logic
     my $self = shift;
     $self->chain_reset();
     # setup input
-    $self->_chain_excec();
+    $self->_chain_excec(@_);
 }
 
 
-# resets inputs and used
+# resets inputs and used of all attatched nodes
 sub chain_reset {
     my $self = shift;
-    if ($self->{used} == 0){
-        logic_error->raise("can't reset an already reset node");
+    if ($self->{used} != 0){
+
+        $self->{used} = 0;
+        for (@{$self->{inputs}}){
+            $_ = -1;
+        }
+        my @values = ();
+        $self->{values} = \@values;
+
+        my $out;
+        for $out (@{$self->{outputs}}){
+            $out->chain_reset();
+        }
     }
 
-    $self->{used} = 0;
-    for (@{$self->{inputs}}){
-        $_ = 0;
-    }
-
-    my $out;
-    for $out (@{$self->{outputs}}){
-        $out->_chain_reset();
-    }
 }
 
 # recieve_input then if all inputs satisfied, _chain_excec next
 sub _chain_excec {
     my $self = shift;
+
+    # recieve input
+    my @inputs = @_;
+    if (scalar @{$self->{sources}} == 0){
+        $self->{inputs} = \@inputs;
+    }else {
+        $self->_recieve_input(@inputs);
+    }
+
+    # eval and send outputs
+
+    for (@{$self->{inputs}}){
+        return if $_ == -1;
+    }
+
     if ($self->{used}){
-        logic_error -> raise("node hit twice, ensure there ae no loops in async. logic");
+        logic_error -> raise("node tried to evaluate twice: ensure there are no loops in async. logic");
     }
     $self->{used} = 1;
 
-    my @out = $self->evaluate($self->{inputs});
-
+    my @out = ($self->evaluate(@{$self->{inputs}}));
+    
     if (scalar @out != scalar $self->{outputs}){
         my $evaluated = scalar @out;
-        my $needed = scalar $self->{outputs};
-        logic_error -> raise ("mismatched outputs: $evaluated evaluated, but $needed outputs attatched")
+        my $needed = scalar @{$self->{outputs}};
+        #logic_error -> raise ("mismatched outputs: $evaluated evaluated, but $needed outputs attatched")
     }
 
-    # TODO:
+    my $i;
+    for ($i = 0; $i < scalar @{$self->{outputs}}; $i++){
+        my $node = @{$self->{outputs}}[$i];
+        my @formated = ($self->to_input_array(@out[$i])); # TODO: error lies here
+        $node -> _chain_excec(@formated);
+    }
 
 }
 
-# determine object is setup correctly for evaluation (are the no. of inputs / outputs valid)
+# determine object is setup correctly for excec (are the no. of inputs / outputs valid)
 sub verify {
     my $self = shift;
 
-    if ({${$self->{sources}} != ${$self->{outputs}}}){
+    if ({${$self->{inputs}} != ${$self->{outputs}}}){
         logic_error->raise("mismatched number of inputs and outputs");
     }
+    
     return 1;
 }
 
 sub evaluate {
     my $self = shift;
-    my $inputs = @_;
-    return $inputs;
+    my @inputs = @_;
+    return @inputs;
 }
 
 # deallocate all nodes (I see this getting complecated)

@@ -2,7 +2,7 @@
 An easily extendable regex based hardware description language and it's respective simulation tools
 
 # tests
-The tests provides a bunch of examples of how to use this project. 
+The tests provides a bunch of examples of how to use this project. they also document the order in which features were added
 
 # logic
 Each logic element inherits from wire and extends the evaluate and verify functions
@@ -16,6 +16,7 @@ The following have been implemented and tested:
 
 Partially implemented and tested:
  - _recieve_input()
+ - to_input_array()
 
 TODO:
  - excec()
