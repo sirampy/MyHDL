@@ -6,8 +6,8 @@ sub raise {
 
 }
 
-# wire is the base class - most components inheriting from wire should only update evaluate and verify
-package wire;
+# wire is the base class - most components inheriting should only update evaluate and verify
+package _node;
 use strict;
 
 sub new {
@@ -201,14 +201,70 @@ sub verify {
 
 sub evaluate {
     my $self = shift;
+    logic_error->raise("Node: ",$self," tried to evaluate when no evaluate() has been defined. (if you are using a custom node, ensure you have defined evaluate for it)");
+}
+
+# TODO: destructor
+
+package wire;
+use base "_node";
+
+sub evaluate {
+    my $self = shift;
     my @inputs = @_;
     return @inputs;
 }
 
-# deallocate all nodes (I see this getting complecated)
-sub destructor(){}
+package and_gate;
+use base "_node";
 
+sub excec {
+    my $self = shift;
+    my @inputs = @_;
+    my $product = 1;
+    for (@inputs){
+        $product = ($product * $_) %2;
+    }
+    my @out = ();
+    for (my $i = 0; $i < scalar @{$self->{outputs}}; $i++){
+        push @out, $product;
+    }
+    return @out;
+}
 
-package gate;
+package or_gate;
+use base "_node";
 
+sub excec {
+    my $self = shift;
+    my @inputs = @_;
+    my $sum = 0;
+    for (@inputs){
+        if ($_ == 1) {
+            $sum = 1;
+        }
+    }
+    my @out = ();
+    for (my $i = 0; $i < scalar @{$self->{outputs}}; $i++){
+        push @out, $sum;
+    }
+    return @out;
+}
+
+package xor_gate;
+use base "_node";
+
+sub excec {
+    my $self = shift;
+    my @inputs = @_;
+    my $sum = 0;
+    for (@inputs){
+        $sum = ( $sum + $_ ) % 2;
+    }
+    my @out = ();
+    for (my $i = 0; $i < scalar @{$self->{outputs}}; $i++){
+        push @out, $sum;
+    }
+    return @out;
+}
 1;

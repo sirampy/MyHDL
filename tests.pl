@@ -231,6 +231,8 @@ sub example_test_attributes {
     logic_tests->test_attributes($test);
 }
 
+package parser_tests;
+
 package main;
 
-logic_tests->test_wire();
+package_tests->idk();

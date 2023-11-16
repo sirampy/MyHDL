@@ -13,13 +13,14 @@ The following have been implemented and tested:
  - add_output() 
  - chain_add_output()
  - add_source() 
+ - excec()
+
 
 Partially implemented and tested:
  - _recieve_input()
  - to_input_array()
 
 TODO:
- - excec()
 
 If there are multiple inputs from the same source, the order is't pre-determined
 
