@@ -1,4 +1,4 @@
-package logic_error;
+package error;
 
 sub raise {
     ($self, $error, $location) = @_;
@@ -116,7 +116,7 @@ sub _recieve_input {
             }
         }
 
-    logic_error->raise("couldn't recieve input: ",@$v) if not $set; # TODO: better error message
+    error->raise("couldn't recieve input: ",@$v) if not $set; # TODO: better error message
     }
 }
 
@@ -167,7 +167,7 @@ sub _chain_excec {
     }
 
     if ($self->{used}){
-        logic_error -> raise("node tried to evaluate twice: ensure there are no loops in async. logic");
+        error -> raise("node tried to evaluate twice: ensure there are no loops in async. logic");
     }
     $self->{used} = 1;
 
@@ -176,7 +176,7 @@ sub _chain_excec {
     if (scalar @out != scalar $self->{outputs}){
         my $evaluated = scalar @out;
         my $needed = scalar @{$self->{outputs}};
-        #logic_error -> raise ("mismatched outputs: $evaluated evaluated, but $needed outputs attatched")
+        #error -> raise ("mismatched outputs: $evaluated evaluated, but $needed outputs attatched")
     }
 
     my $i;
@@ -193,7 +193,7 @@ sub verify {
     my $self = shift;
 
     if ({${$self->{inputs}} != ${$self->{outputs}}}){
-        logic_error->raise("mismatched number of inputs and outputs");
+        error->raise("mismatched number of inputs and outputs");
     }
     
     return 1;
@@ -201,7 +201,7 @@ sub verify {
 
 sub evaluate {
     my $self = shift;
-    logic_error->raise("Node: ",$self," tried to evaluate when no evaluate() has been defined. (if you are using a custom node, ensure you have defined evaluate for it)");
+    error->raise("Node: ",$self," tried to evaluate when no evaluate() has been defined. (if you are using a custom node, ensure you have defined evaluate for it)");
 }
 
 # TODO: destructor

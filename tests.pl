@@ -233,6 +233,19 @@ sub example_test_attributes {
 
 package parser_tests;
 
+use lib ".";
+use parser;
+use strict;
+
+sub test_parse_file {
+
+    my $self = shift;
+    my $filename = shift;
+    my $filename = "example.mh" if not defined $filename;
+
+    MyHDL->parse_file($filename);
+}
+
 package main;
 
-package_tests->idk();
+parser_tests->test_parse_file();

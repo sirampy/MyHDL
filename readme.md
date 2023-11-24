@@ -30,3 +30,9 @@ simply exists to make it easier to change how errors are displayed down the line
 # parser
 to keep the scope simple, the parser will be a basic regex based one.
 support for modules may get added at a later date.
+
+Example syntax:
+```
+Node_type inputs -> outputs
+```
+the file should have the extensio .mh for MyHDL.
