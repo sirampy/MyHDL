@@ -1,0 +1,2 @@
+wire in1->out
+and in1, in2 -> out
