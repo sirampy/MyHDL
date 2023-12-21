@@ -5,13 +5,18 @@ use strict;
 
 sub new {
     my $class = shift;
+    my $width = shift;
     
     my @outputs;
-    my @input;
+    my @inputs;
+
+    if (defined $width) {
+        @inputs = (-1) x $width;
+    }
 
      my $self = {
         outputs => \@outputs, # [node_addr, [outputs] indexed by input EG: [-1,-1,5] - input[2] = output[5]]
-        input => \@input, # list of recieved input: -1 if unset, 0 or 1 if set
+        inputs => \@inputs, # list of recieved input: -1 if unset, 0 or 1 if set
     };
 
     $self = bless $self, $class;
@@ -21,8 +26,7 @@ sub new {
 # test if all inputs have been set
 sub used {
     my $self = shift;
-
-    for ($self->{input}){
+    for (@{$self->{inputs}}){
         return 0 if ($_ == -1);
     }
 
@@ -32,24 +36,24 @@ sub used {
 # show how manny inputs is being expected
 sub input_width {
     my $self = shift;
-    return scalar @{$self->{input}};
+    return scalar @{$self->{inputs}};
 }
 
 sub add_output {
     my ($self, $input_addr, $input, $output) = @_;
 
     die("input out of range") if $input >= $input_addr->input_width();
-    die("output out of range") if $input >= $self->output_width();
+    die("output out of range") if $output >= $self->output_width();
 
     # case that input_addr already has an entry
     for (@{$self->{outputs}}){
         if (@$_[0] == $input_addr){
 
-            if (@{@$_[1]}[$input] != -1){n # TODO
+            if (@{@$_[1]}[$input] != -1){ # TODO
                 print "warning: input already set from current source - overwriting\n";
             }
 
-            ${@{@$_[1]}[$input]} = $output;
+            @{@$_[1]}[$input] = $output;
             return;
         }
     }
@@ -69,20 +73,6 @@ sub add_output {
     push @{$self->{outputs}}, [$input_addr, \@outputs];
 }
 
-#TODO:
-# takes an array of values and formats it to be compatible with _recieve_input (no order)
-sub to_input_array {
-    my $self = shift;
-    my @input_array;
-    my @out = ();
-
-    for (@_){
-        my @input = ($self,$_);
-        push @out, \@input;
-    }
-    return @out;
-}
-
 # recieve an input and match it to the correct input index
 # input is a vector of vector pointers in the form [val, input]
 sub _recieve_input {
@@ -96,7 +86,7 @@ sub _recieve_input {
         my $input = @$_[1];
 
         # check if input is set
-        die("couldn't recieve input: ",@$_" already set.") if (@{$self->{inputs}}[$input] != -1); # TODO: better error message
+        die("couldn't recieve input. input: ",@$_[1]," already set.") if (@{$self->{inputs}}[$input] != -1); # TODO: better error message
         
         @{$self->{inputs}}[$input] = $val
 
@@ -118,51 +108,46 @@ sub chain_reset {
 
     my $is_reset = 1;
 
-    for @{$self->{inputs}}{
-        if $_ != -1{
+    for (@{$self->{inputs}}){
+        if ($_ != -1){
             $is_reset = 0 ;
             $_ = -1;
         }
     }
 
-    return if is_reset;
+    return if $is_reset;
 
     # reset attatchedd nodes
-    if ($self->{outputs} != 0){
-
-        ${@$_[0]}->chain_reset();
+    for (@{$self->{outputs}}){
+        @$_[0]->chain_reset();
     }
 
 }
 
 # recieve_input then if all input satisfied, _chain_excec next 
-sub _chain_excec {
+sub chain_excec {
     my $self = shift;
 
     # recieve input
     my @input = @_;
-    if (scalar @{$self->{sources}} == 0){ # for input node
-        $self->{input} = \@input;
-    }else {
-        $self->_recieve_input(@input);
-    }
+
+    $self->_recieve_input(@input);
 
     return if not $self->used();
 
     # eval and send outputs
 
-    my @out = ($self->evaluate(@{$self->{input}}));
-    my @entries = [];
+    my @out = ($self->evaluate(@{$self->{inputs}}));
 
     for (@{$self->{outputs}}){
         my $node = @$_[0];
+        my @entries;
         my @inputs = @{@$_[1]};
-        for (my $i = 0; i < scalar @inputs; $i++){
-            push @entries, [$out[$i],$i] if ($out[$i] != -1);# val,inuput
+        for (my $i = 0; $i < scalar @inputs; $i++){
+            push @entries, [$out[$inputs[$i]],$i] if ($inputs[$i] != -1);# val,inuput
         }
+        $node->chain_excec(@entries);
     }
-
-    $node->chain_excec(@entries);
 
 }
 
@@ -170,7 +155,7 @@ sub _chain_excec {
 sub verify {
     my $self = shift;
 
-    if ({${$self->{input}} != ${$self->{outputs}}}){
+    if ({${$self->{inputs}} != ${$self->{outputs}}}){
         die("mismatched number of input and outputs");
     }
     

@@ -14,11 +14,9 @@ sub create_wire {
 }
 
 # these tests are informal, so manny require someone to manually verify the output displayed by this function
-sub test_attributes {
+sub print_attributes {
     my ( $self, $test)  = @_;
     $test = wire->new() if not defined($test);
-
-    print "### DISPLAYING ATTRIBUTES ### \n";
 
     print "self is: $test \n\n";
     while ( my ($k,$v) = each %$test ) {
@@ -38,7 +36,7 @@ sub test_attributes {
 }
 
 # dosnt test multiple inputs from diferent sources
-sub test_add_output {
+sub add_output {
     my $self = shift;
     my $test = wire->new();
     my @test_input = @_;
@@ -55,189 +53,90 @@ sub test_add_output {
     push @{$test->{input}}, -1;
     
     for (my $i = 0; $i < (scalar @test_input); $i++ ) {
-        push @{@test_input[$i]->{input}}, -1;
+        push @{@test_input[$i]->{inputs}}, -1;
         print @test_input[$i]," : ",$i,"\n";
         $test -> add_output(@test_input[$i],0,$i);
     }
 
     print "\n";
-
-    logic_tests->test_attributes($test);
+    print "### DISPLAYING ATTRIBUTES ### \n";
+    logic_tests->print_attributes($test);
 }
 
-# TODO: chain_reset, _chain_excec + _recieve_input + (excec)
-# provide args to test with own inputs
-sub test_add_source {
-    my $self = shift;
-    my $test = wire->new();
-    my @test_input = @_;
-
-    if (scalar @test_input == 0) {
-        push @test_input, (wire->new(),0);
-        push @test_input, (wire->new(),1);
-        push @test_input, (wire->new(),2);
-    }
-
-    print "### ADDING SOURCES: ###\n";
-    print "self is: $test \n\n";
-    
-    my $i;
-    for $i (@test_input) {
-        print "adding: ", $i,"\n";
-        $test -> add_source($i);
-    }
-
-    print "\n";
-
-    logic_tests->test_attributes($test);
-
-}
-
-# provide args to test with own inputs
-sub test_chain_add_output(){
-    my $self = shift;
-    my $test = wire->new();
-    my @test_input = @_;
-
-    if (scalar @test_input == 0) {
-        push @test_input, wire->new();
-        push @test_input, wire->new();
-        push @test_input, wire->new();
-    }
-
-    print "### ADDING OUTPUTS: ###\n";
-    print "self is: $test \n\n";
-    
-    my $i;
-    for $i (@test_input) {
-        print $i,"\n";
-        $test -> chain_add_output($i);
-    }
-
-    print "\n";
-
-    logic_tests->test_attributes($test);
-
-    for $i (@test_input) {
-        logic_tests->test_attributes($i);
-    }
-}
-
-# TODO: make a more complex test
-# basic test - dosn't test complete functionality
-sub test_recieve_input {
-    my $self = shift;
-    my $test = wire->new();
-    my @test_input = @_;
-    my @L2_nodes; # level 2 nodes
-
-    if (scalar @test_input == 0) {
-        @test_input = (0,1,1,0);
-    }
-
-    for (@test_input){
-        push @L2_nodes, wire->new();
-    }
-
-    print "### ADDING OUTPUTS: ###\n";
-    print "self is: $test \n\n";
-    
-    my $i;
-    for $i (@L2_nodes) {
-        print $i,"\n";
-        $test -> chain_add_output($i);
-    }
-    print "\n";
-
-    print "### TESTING RECIEVE: ###\n";
-
-    my @formated_test_input = ();
-
-    for $i (@test_input){
-        my @row = ($test,$i);
-        push @formated_test_input, \@row;
-    }
-
-    print "formated test inputs: \n";
-
-    for (@formated_test_input){
-        print @$_, "\n";
-    }
-    print "\n";
-
-    for ($i = 0; $i < scalar (@{$test->{outputs}}); $i++) {
-        my @current = @{@formated_test_input[$i]};
-        print "sending: ", @current , "\n";
-        ${$test->{outputs}}[$i] -> _recieve_input(\@current);
-    }
-    print "\n";
-
-    for $i (@L2_nodes) {
-        logic_tests->test_attributes($i);
-    }
-}
-
-sub test_to_input_array {
-    my $self = shift;
-    my @args = @_;
-    my $test = create_wire();
-
-    if (scalar @args == 0) {
-        @args = (0,1,1,0);
-    }
-    
-    my @out = $test->to_input_array(@args);
-
-    print "inputs: ", @args, " turn into: \n";
-    for (@out){
-        print @$_,"\n";
-    }
-    return @out;
-}
-
+# chain_reset, _chain_excec + _recieve_input + (excec)
 # tests all basic functionality of wire
-sub test_wire {
+sub wire {
     my $self = shift;
+    my @test_input = @_;
 
-    # setup a chain or wires
-    my $in_node = wire -> new;
-    my $L1_N0 = wire -> new;
-    my $L1_N1 = wire -> new;
-    my $out_node = wire -> new;
+    # setup network
+    my $input = wire->new(2);
 
-    $in_node -> chain_add_output($L1_N0,$L1_N1);
-    $L1_N0 -> chain_add_output($out_node);
-    $L1_N1 -> chain_add_output($out_node);
+    my $l1n0 = wire->new(2); # layer 1 node 0
+    my $l1n1 = wire->new(1); # layer 1 node 1 ... etc
+
+    my $l2n0 = wire->new(2);
     
-    sub display{
-        print "~~~ INPUT: ~~~\n";
-        $self->test_attributes($in_node);
-        print "~~~ L1->N0: ~~~\n";
-        $self->test_attributes($L1_N0);
-        print "~~~ L1->N1: ~~~\n";
-        $self->test_attributes($L1_N1);
-        print "~~~ OUTPUT: ~~~\n";
-        $self->test_attributes($out_node);
-    }
+    my $output = wire->new(3);
 
-    print "====INITIAL:====\n";
-    display();
+    $input->add_output($l1n0,0,0); #(node,in,out)
+    $input->add_output($l1n0,1,1); 
+    $input->add_output($l1n1,0,1); 
 
-    $in_node -> excec(0,1);
-    
-    print "====EVALUATED:====\n";
-    display();
+    $l1n0->add_output($output,0,0);
+    $l1n0->add_output($l2n0,0,1);
+    $l1n1->add_output($l2n0,1,0);
+
+    $l2n0->add_output($output,1,0);
+    $l2n0->add_output($output,2,1);
+
+    print "### INITIAL STATE: ###\n";
+    print "INPUT: \n";
+    logic_tests->print_attributes($input);
+    print "L1: \n";
+    logic_tests->print_attributes($l1n0);
+    logic_tests->print_attributes($l1n1);
+    print "L2: \n";
+    logic_tests->print_attributes($l2n0);
+    print "OUTPUT: \n";
+    logic_tests->print_attributes($output);
+
+    $input->excec([1,0],[0,1]);
+
+    print "### POST EXCEC STATE: ###\n";
+    print "INPUT: \n";
+    logic_tests->print_attributes($input);
+    print "L1: \n";
+    logic_tests->print_attributes($l1n0);
+    logic_tests->print_attributes($l1n1);
+    print "L2: \n";
+    logic_tests->print_attributes($l2n0);
+    print "OUTPUT: \n";
+    logic_tests->print_attributes($output);
+
+    $input->chain_reset();
+
+    print "### POST RESET STATE: ###\n";
+    print "INPUT: \n";
+    logic_tests->print_attributes($input);
+    print "L1: \n";
+    logic_tests->print_attributes($l1n0);
+    logic_tests->print_attributes($l1n1);
+    print "L2: \n";
+    logic_tests->print_attributes($l2n0);
+    print "OUTPUT: \n";
+    logic_tests->print_attributes($output);
+
 }
 
-# some example usages of logic_tests
 package example_logic_tests;
 
-sub example_test_attributes {
+sub example_print_attributes {
     my $test = logic_tests->create_wire();
     $test->{used} = 1;
     push @{$test->{inputs}}, 1, 0;
     push @{$test->{inputs}}, 1, 1;
-    logic_tests->test_attributes($test);
+    logic_tests->print_attributes($test);
 }
 
 package parser_tests;
@@ -257,4 +156,4 @@ sub test_parse_file {
 
 package main;
 
-logic_tests->test_add_output();
+logic_tests->wire();
