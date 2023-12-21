@@ -6,7 +6,6 @@ package logic_tests;
 use lib ".";
 use logic;
 use strict;
-use Data::Dumper qw(Dumper);
 
 sub create_wire {
     my $test = wire->new();
@@ -21,9 +20,6 @@ sub test_attributes {
 
     print "### DISPLAYING ATTRIBUTES ### \n";
 
-    print Dumper $test;
-    
-=pod
     print "self is: $test \n\n";
     while ( my ($k,$v) = each %$test ) {
         if (ref($v)){
@@ -39,8 +35,6 @@ sub test_attributes {
         }
     }
     print "\n";
-=cut
-
 }
 
 # dosnt test multiple inputs from diferent sources
@@ -61,8 +55,9 @@ sub test_add_output {
     push @{$test->{input}}, -1;
     
     for (my $i = 0; $i < (scalar @test_input); $i++ ) {
-        print $i,": ",@test_input[$i],"\n"; 
-        $test -> add_output(@test_input[$i]);
+        push @{@test_input[$i]->{input}}, -1;
+        print @test_input[$i]," : ",$i,"\n";
+        $test -> add_output(@test_input[$i],0,$i);
     }
 
     print "\n";
@@ -70,13 +65,134 @@ sub test_add_output {
     logic_tests->test_attributes($test);
 }
 
+# TODO: chain_reset, _chain_excec + _recieve_input + (excec)
+# provide args to test with own inputs
+sub test_add_source {
+    my $self = shift;
+    my $test = wire->new();
+    my @test_input = @_;
 
+    if (scalar @test_input == 0) {
+        push @test_input, (wire->new(),0);
+        push @test_input, (wire->new(),1);
+        push @test_input, (wire->new(),2);
+    }
 
+    print "### ADDING SOURCES: ###\n";
+    print "self is: $test \n\n";
+    
+    my $i;
+    for $i (@test_input) {
+        print "adding: ", $i,"\n";
+        $test -> add_source($i);
+    }
+
+    print "\n";
+
+    logic_tests->test_attributes($test);
+
+}
+
+# provide args to test with own inputs
+sub test_chain_add_output(){
+    my $self = shift;
+    my $test = wire->new();
+    my @test_input = @_;
+
+    if (scalar @test_input == 0) {
+        push @test_input, wire->new();
+        push @test_input, wire->new();
+        push @test_input, wire->new();
+    }
+
+    print "### ADDING OUTPUTS: ###\n";
+    print "self is: $test \n\n";
+    
+    my $i;
+    for $i (@test_input) {
+        print $i,"\n";
+        $test -> chain_add_output($i);
+    }
+
+    print "\n";
+
+    logic_tests->test_attributes($test);
+
+    for $i (@test_input) {
+        logic_tests->test_attributes($i);
+    }
+}
 
 # TODO: make a more complex test
 # basic test - dosn't test complete functionality
 sub test_recieve_input {
-    return
+    my $self = shift;
+    my $test = wire->new();
+    my @test_input = @_;
+    my @L2_nodes; # level 2 nodes
+
+    if (scalar @test_input == 0) {
+        @test_input = (0,1,1,0);
+    }
+
+    for (@test_input){
+        push @L2_nodes, wire->new();
+    }
+
+    print "### ADDING OUTPUTS: ###\n";
+    print "self is: $test \n\n";
+    
+    my $i;
+    for $i (@L2_nodes) {
+        print $i,"\n";
+        $test -> chain_add_output($i);
+    }
+    print "\n";
+
+    print "### TESTING RECIEVE: ###\n";
+
+    my @formated_test_input = ();
+
+    for $i (@test_input){
+        my @row = ($test,$i);
+        push @formated_test_input, \@row;
+    }
+
+    print "formated test inputs: \n";
+
+    for (@formated_test_input){
+        print @$_, "\n";
+    }
+    print "\n";
+
+    for ($i = 0; $i < scalar (@{$test->{outputs}}); $i++) {
+        my @current = @{@formated_test_input[$i]};
+        print "sending: ", @current , "\n";
+        ${$test->{outputs}}[$i] -> _recieve_input(\@current);
+    }
+    print "\n";
+
+    for $i (@L2_nodes) {
+        logic_tests->test_attributes($i);
+    }
+}
+
+sub test_to_input_array {
+    my $self = shift;
+    my @args = @_;
+    my $test = create_wire();
+
+    if (scalar @args == 0) {
+        @args = (0,1,1,0);
+    }
+    
+    my @out = $test->to_input_array(@args);
+
+    print "inputs: ", @args, " turn into: \n";
+    for (@out){
+        print @$_,"\n";
+    }
+    return @out;
 }
 
 # tests all basic functionality of wire

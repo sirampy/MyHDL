@@ -7,11 +7,11 @@ sub new {
     my $class = shift;
     
     my @outputs;
-    my @inputs;
+    my @input;
 
      my $self = {
-        outputs => \@outputs, # [node_addr, [outputs] indexed by input]
-        inputs => \@inputs, # list of recieved input: -1 if unset, 0 or 1 if set
+        outputs => \@outputs, # [node_addr, [outputs] indexed by input EG: [-1,-1,5] - input[2] = output[5]]
+        input => \@input, # list of recieved input: -1 if unset, 0 or 1 if set
     };
 
     $self = bless $self, $class;
@@ -22,7 +22,7 @@ sub new {
 sub used {
     my $self = shift;
 
-    for ($self->{inputs}){
+    for ($self->{input}){
         return 0 if ($_ == -1);
     }
 
@@ -32,95 +32,137 @@ sub used {
 # show how manny inputs is being expected
 sub input_width {
     my $self = shift;
-    return scalar @{$self->{inputs}};
+    return scalar @{$self->{input}};
 }
 
-# setup output and add to input array
 sub add_output {
-    my $self = shift;
-    my @outputs = @_;
+    my ($self, $input_addr, $input, $output) = @_;
 
-    for (@outputs){
-        push @{$self->{outputs}}, $_;
-        push @{$_->{inputs}}, -1;
+    die("input out of range") if $input >= $input_addr->input_width();
+    die("output out of range") if $input >= $self->output_width();
+
+    # case that input_addr already has an entry
+    for (@{$self->{outputs}}){
+        if (@$_[0] == $input_addr){
+
+            if (@{@$_[1]}[$input] != -1){n # TODO
+                print "warning: input already set from current source - overwriting\n";
+            }
+
+            ${@{@$_[1]}[$input]} = $output;
+            return;
+        }
+    }
+
+    # case that input_addr dosnt have an entry already:
+    my $input_width = $input_addr -> input_width();
+    my @outputs;
+
+    for (my $i == 0; $i < $input_width; $i++){
+        if ($i == $input){
+            push @outputs, $output;
+        }else{
+            push @outputs, -1;
+        }
+    }
+
+    push @{$self->{outputs}}, [$input_addr, \@outputs];
+}
+
+#TODO:
+# takes an array of values and formats it to be compatible with _recieve_input (no order)
+sub to_input_array {
+    my $self = shift;
+    my @input_array;
+    my @out = ();
+
+    for (@_){
+        my @input = ($self,$_);
+        push @out, \@input;
+    }
+    return @out;
+}
+
+# recieve an input and match it to the correct input index
+# input is a vector of vector pointers in the form [val, input]
+sub _recieve_input {
+    my $self = shift;
+
+    my @entries = @_;
+
+    for (@entries){
+
+        my $val = @$_[0];
+        my $input = @$_[1];
+
+        # check if input is set
+        die("couldn't recieve input: ",@$_" already set.") if (@{$self->{inputs}}[$input] != -1); # TODO: better error message
+        
+        @{$self->{inputs}}[$input] = $val
+
     }
 
 }
 
-
-# recieve an input and match it to the correct input index
-# input is a vector of vector pointers in the form [\$source, val, (order)]
-# order exists to diferentiate multiple input from the same source - this is not fully supported yet.
-sub _recieve_input {
-    # TODO
-    return;
-}
-
-sub excec { # reset and excecute all dependant logic
+sub excec { # reset and excecute all dependant logic 
     my $self = shift;
     $self->chain_reset();
     # setup input
-    $self->_chain_excec(@_);
+    $self->chain_excec(@_);
 }
 
 
-# resets input and used of all attatched nodes
+# resets input and used of all attatched nodes 
 sub chain_reset {
     my $self = shift;
-    if ($self->{used} != 0){
 
-        $self->{used} = 0;
-        for (@{$self->{input}}){
+    my $is_reset = 1;
+
+    for @{$self->{inputs}}{
+        if $_ != -1{
+            $is_reset = 0 ;
             $_ = -1;
         }
-        my @values = ();
-        $self->{values} = \@values;
+    }
 
-        my $out;
-        for $out (@{$self->{outputs}}){
-            $out->chain_reset();
-        }
+    return if is_reset;
+
+    # reset attatchedd nodes
+    if ($self->{outputs} != 0){
+
+        ${@$_[0]}->chain_reset();
     }
 
 }
 
-# recieve_input then if all input satisfied, _chain_excec next
+# recieve_input then if all input satisfied, _chain_excec next 
 sub _chain_excec {
     my $self = shift;
 
     # recieve input
     my @input = @_;
-    if (scalar @{$self->{sources}} == 0){
+    if (scalar @{$self->{sources}} == 0){ # for input node
         $self->{input} = \@input;
     }else {
         $self->_recieve_input(@input);
     }
 
+    return if not $self->used();
+
     # eval and send outputs
 
-    for (@{$self->{input}}){
-        return if $_ == -1;
-    }
-
-    if ($self->{used}){
-        die("node tried to evaluate twice: ensure there are no loops in async. logic");
-    }
-    $self->{used} = 1;
-
     my @out = ($self->evaluate(@{$self->{input}}));
-    
-    if (scalar @out != scalar $self->{outputs}){
-        my $evaluated = scalar @out;
-        my $needed = scalar @{$self->{outputs}};
-        #die ("mismatched outputs: $evaluated evaluated, but $needed outputs attatched")
+    my @entries = [];
+
+    for (@{$self->{outputs}}){
+        my $node = @$_[0];
+        my @inputs = @{@$_[1]};
+        for (my $i = 0; i < scalar @inputs; $i++){
+            push @entries, [$out[$i],$i] if ($out[$i] != -1);# val,inuput
+        }
     }
 
-    my $i;
-    for ($i = 0; $i < scalar @{$self->{outputs}}; $i++){
-        my $node = @{$self->{outputs}}[$i];
-        my @formated = ($self->to_input_array(@out[$i])); # TODO: error lies here
-        $node -> _chain_excec(@formated);
-    }
+    $node->chain_excec(@entries);
 
 }
 
