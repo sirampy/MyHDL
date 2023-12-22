@@ -189,10 +189,10 @@ sub output_width {
     return $self->input_width();
 }
 
-package and_gate;
+package and;
 use base "_node";
 
-sub excec {
+sub evaluate {
     my $self = shift;
     my @input = @_;
     my $product = 1;
@@ -206,10 +206,10 @@ sub excec {
     return @out;
 }
 
-package or_gate;
+package or;
 use base "_node";
 
-sub excec {
+sub evaluate {
     my $self = shift;
     my @input = @_;
     my $sum = 0;
@@ -225,10 +225,10 @@ sub excec {
     return @out;
 }
 
-package xor_gate;
+package xor;
 use base "_node";
 
-sub excec {
+sub evaluate {
     my $self = shift;
     my @input = @_;
     my $sum = 0;

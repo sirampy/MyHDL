@@ -129,23 +129,13 @@ sub wire {
 
 }
 
-package example_logic_tests;
-
-sub example_print_attributes {
-    my $test = logic_tests->create_wire();
-    $test->{used} = 1;
-    push @{$test->{inputs}}, 1, 0;
-    push @{$test->{inputs}}, 1, 1;
-    logic_tests->print_attributes($test);
-}
-
 package parser_tests;
 
 use lib ".";
 use parser;
 use strict;
 
-sub test_parse_file {
+sub parse_file {
 
     my $self = shift;
     my $filename = shift;
@@ -156,4 +146,4 @@ sub test_parse_file {
 
 package main;
 
-logic_tests->wire();
+parser_tests->parse_file();
